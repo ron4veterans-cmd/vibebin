@@ -11,7 +11,8 @@ import { Button } from "@/components/Button";
 import { formatDate } from "@/lib/utils";
 import { IconCopy, IconCheck, IconTrash, IconArrowLeft } from "@/components/Icons";
 import Link from "next/link";
-
+export const dynamic = "force-dynamic";
+export const dynamicParams = true;
 export default function PromptDetailPage() {
   const params = useParams();
   const id = params.id as string;
