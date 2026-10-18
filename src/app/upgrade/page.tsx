@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { getLocalUser, setLocalUser } from "@/lib/store";
+import { useState } from "react";
 import { Button } from "@/components/Button";
 import {
   FREE_PROMPT_LIMIT,
@@ -12,30 +11,46 @@ import {
 import { IconCheck } from "@/components/Icons";
 
 export default function UpgradePage() {
-  const router = useRouter();
-  const user = typeof window !== "undefined" ? getLocalUser() : null;
+  const [loading, setLoading] = useState<"monthly" | "yearly" | 
+null>(null);
+  const [error, setError] = useState("");
 
-  const activatePro = (plan: "monthly" | "yearly") => {
-    if (!user) {
-      router.push("/login");
+  const startCheckout = (plan: "monthly" | "yearly") => {
+    const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
+    const priceId =
+      plan === "yearly"
+        ? process.env.PADDLE_PRICE_YEARLY
+        : process.env.PADDLE_PRICE_MONTHLY;
+
+    if (!token || !priceId) {
+      setError("Paddle is not configured yet.");
       return;
     }
-    // Demo: instantly upgrade. Real Stripe checkout comes next.
-    setLocalUser({ ...user, isPro: true });
-    router.push("/library");
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
+    script.onload = () => {
+      // @ts-expect-error
+      Paddle.Environment.set("sandbox");
+      // @ts-expect-error
+      Paddle.Initialize({ token });
+      // @ts-expect-error
+      Paddle.Checkout.open({ items: [{ priceId, quantity: 1 }] });
+    };
+    document.body.appendChild(script);
+    setLoading(plan);
   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border">
-        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center 
+justify-between">
           <Link href="/" className="text-lg font-semibold tracking-tight">
             VibeBin
           </Link>
-          <Link
-            href="/library"
-            className="text-sm text-muted hover:text-foreground"
-          >
+          <Link href="/library" className="text-sm text-muted 
+hover:text-foreground">
             Back to library
           </Link>
         </div>
@@ -46,84 +61,77 @@ export default function UpgradePage() {
           Upgrade to Pro
         </h1>
         <p className="mt-3 text-muted text-center max-w-md mx-auto">
-          Unlimited prompts, collections, sharing, and export. Cancel anytime.
+          Unlimited prompts, collections, sharing, and export. Cancel 
+anytime.
         </p>
 
+        {error && (
+          <div className="mt-6 max-w-md mx-auto rounded-lg border 
+border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive 
+text-center">
+            {error}
+          </div>
+        )}
+
         <div className="mt-10 grid sm:grid-cols-2 gap-6">
-          {/* Monthly */}
           <div className="border border-border rounded-xl p-6 bg-surface">
             <h2 className="font-medium">Monthly</h2>
             <p className="mt-2 text-3xl font-semibold">
               ${PRO_MONTHLY_PRICE}
-              <span className="text-base font-normal text-muted">/mo</span>
+              <span className="text-base font-normal 
+text-muted">/mo</span>
             </p>
             <ul className="mt-6 space-y-2.5 text-sm text-muted">
-              <li className="flex gap-2">
-                <IconCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                Unlimited prompts & agent configs
-              </li>
-              <li className="flex gap-2">
-                <IconCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                Collections & folders
-              </li>
-              <li className="flex gap-2">
-                <IconCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                Public share links
-              </li>
-              <li className="flex gap-2">
-                <IconCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                Export JSON / Markdown
-              </li>
+              <li className="flex gap-2"><IconCheck className="w-4 h-4 
+text-success shrink-0 mt-0.5" /> Unlimited prompts</li>
+              <li className="flex gap-2"><IconCheck className="w-4 h-4 
+text-success shrink-0 mt-0.5" /> Collections</li>
+              <li className="flex gap-2"><IconCheck className="w-4 h-4 
+text-success shrink-0 mt-0.5" /> Share links</li>
+              <li className="flex gap-2"><IconCheck className="w-4 h-4 
+text-success shrink-0 mt-0.5" /> Export</li>
             </ul>
-            <Button
-              className="w-full mt-6"
-              onClick={() => activatePro("monthly")}
-            >
-              Get Pro – ${PRO_MONTHLY_PRICE}/mo
+            <Button className="w-full mt-6" disabled={loading !== null} 
+onClick={() => startCheckout("monthly")}>
+              {loading === "monthly" ? "Opening…" : `Get Pro – 
+$${PRO_MONTHLY_PRICE}/mo`}
             </Button>
           </div>
 
-          {/* Yearly */}
-          <div className="border border-accent/40 rounded-xl p-6 bg-surface relative">
-            <div className="absolute -top-3 left-6 bg-accent text-background text-xs font-medium px-2.5 py-0.5 rounded-full">
+          <div className="border border-accent/40 rounded-xl p-6 
+bg-surface relative">
+            <div className="absolute -top-3 left-6 bg-accent 
+text-background text-xs font-medium px-2.5 py-0.5 rounded-full">
               Best value
             </div>
             <h2 className="font-medium">Yearly</h2>
             <p className="mt-2 text-3xl font-semibold">
               ${PRO_YEARLY_PRICE}
-              <span className="text-base font-normal text-muted">/yr</span>
+              <span className="text-base font-normal 
+text-muted">/yr</span>
             </p>
-            <p className="text-xs text-accent mt-1">
-              ≈ ${(PRO_YEARLY_PRICE / 12).toFixed(2)}/mo · save ~17%
-            </p>
+            <p className="text-xs text-accent mt-1">≈ ${(PRO_YEARLY_PRICE 
+/ 12).toFixed(2)}/mo</p>
             <ul className="mt-6 space-y-2.5 text-sm text-muted">
-              <li className="flex gap-2">
-                <IconCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                Everything in Monthly
-              </li>
-              <li className="flex gap-2">
-                <IconCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                Two months free
-              </li>
-              <li className="flex gap-2">
-                <IconCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                Priority support
-              </li>
+              <li className="flex gap-2"><IconCheck className="w-4 h-4 
+text-success shrink-0 mt-0.5" /> Everything in Monthly</li>
+              <li className="flex gap-2"><IconCheck className="w-4 h-4 
+text-success shrink-0 mt-0.5" /> Two months free</li>
             </ul>
-            <Button
-              className="w-full mt-6"
-              onClick={() => activatePro("yearly")}
-            >
-              Get Pro – ${PRO_YEARLY_PRICE}/yr
+            <Button className="w-full mt-6" disabled={loading !== null} 
+onClick={() => startCheckout("yearly")}>
+              {loading === "yearly" ? "Opening…" : `Get Pro – 
+$${PRO_YEARLY_PRICE}/yr`}
             </Button>
           </div>
         </div>
 
         <p className="mt-8 text-center text-xs text-muted">
-          Free plan includes {FREE_PROMPT_LIMIT} prompts. Demo upgrade is
-          instant — real Stripe billing comes in the next phase.
+          Free plan includes {FREE_PROMPT_LIMIT} prompts. Payments by 
+Paddle.
         </p>
       </main>
     </div>
   );
 }
+
