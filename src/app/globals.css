@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  /* VibeBin Brand Colors - Dark mode default */
+  --background: #0A0A0B;
+  --surface: #141416;
+  --border: #27272A;
+  --foreground: #FAFAFA;
+  --muted: #A1A1AA;
+  --accent: #22D3EE;
+  --accent-hover: #06B6D4;
+  --success: #4ADE80;
+  --warning: #FBBF24;
+  --destructive: #F87171;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom utilities */
+.bg-surface {
+  background-color: var(--surface);
+}
+
+.border-border {
+  border-color: var(--border);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+}
+
+.hover\:bg-accent-hover:hover {
+  background-color: var(--accent-hover);
+}
