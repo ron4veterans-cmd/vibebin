@@ -1,7 +1,9 @@
 const priceId =
   plan === "yearly"
     ? process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY
-    : process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY;"use client";
+    : process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY;
+
+"use client";
 
 import Link from "next/link";
 import { useState } from "react";
