@@ -1,4 +1,7 @@
-"use client";
+const priceId =
+  plan === "yearly"
+    ? process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY
+    : process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY;"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -19,8 +22,8 @@ null>(null);
     const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
     const priceId =
       plan === "yearly"
-        ? process.env.PADDLE_PRICE_YEARLY
-        : process.env.PADDLE_PRICE_MONTHLY;
+        ? process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY
+        : process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY;
 
     if (!token || !priceId) {
       setError("Paddle is not configured yet.");
