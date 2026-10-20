@@ -30,9 +30,11 @@ export async function POST(request: Request) {
   const event = JSON.parse(raw);
   const eventType = event?.event_type;
 
-  if (eventType === "subscription.created" || eventType === "subscription.updated") {
-    const customData = event?.data?.custom_data;
-    const userId = customData?.user_id;
+if (eventType === "subscription.created" || eventType === "subscription.updated") {
+  const customData = event?.data?.custom_data || event?.data?.items?.[0]?.price?.custom_data;
+  const userId = customData?.user_id;
+
+console.log("Webhook userId:", userId);
 
     if (userId) {
       const supabase = await createClient();
