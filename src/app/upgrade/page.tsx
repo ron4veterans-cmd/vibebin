@@ -10,11 +10,43 @@ export default function UpgradePage() {
   const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
   const [error, setError] = useState("");
 
-  const startCheckout = async (plan: "monthly" | "yearly") => {
-    setError("User ID wiring coming next");
-    setLoading(plan);
-  };
+const startCheckout = async (plan: "monthly" | "yearly") => {
+  const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
+  const priceId =
+    plan === "yearly"
+      ? process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY
+      : process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY;
 
+  if (!token || !priceId) {
+    setError("Paddle is not configured yet.");
+    return;
+  }
+
+  const { createClient } = await import("@/lib/supabase/client");
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    setError("Please sign in first.");
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
+  script.onload = () => {
+    // @ts-expect-error
+    Paddle.Environment.set("sandbox");
+    // @ts-expect-error
+    Paddle.Initialize({ token });
+    // @ts-expect-error
+    Paddle.Checkout.open({
+      items: [{ priceId, quantity: 1 }],
+      customData: { user_id: user.id },
+    });
+  };
+  document.body.appendChild(script);
+  setLoading(plan);
+};
   return (
     <div className="min-h-screen p-8 text-center">
       <h1 className="text-2xl">Upgrade</h1>
