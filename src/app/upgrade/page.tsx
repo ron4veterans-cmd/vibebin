@@ -23,9 +23,12 @@ const startCheckout = async (plan: "monthly" | "yearly") => {
   }
 
   const { createClient } = await import("@/lib/supabase/client");
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
+const supabase = createClient();
+if (!supabase) {
+  setError("Auth not available.");
+  return;
+}
+const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     setError("Please sign in first.");
     return;
