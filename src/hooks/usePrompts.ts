@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Prompt } from "@/types";
@@ -15,9 +13,11 @@ export function usePrompts() {
     if (!supabase) return;
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-    // Check Pro status
     const { data: profile } = await supabase
       .from("profiles")
       .select("subscription_status")
@@ -40,8 +40,12 @@ export function usePrompts() {
     load();
   }, [load]);
 
-  const create = async (title: string, content: string) => {
-    if (!isPro && prompts.length >= FREE_PROMPT_LIMIT) {
+  const count = prompts.length;
+  const freeLimit = FREE_PROMPT_LIMIT;
+  const limitReached = !isPro && count >= freeLimit;
+
+  const create = async (title: string, content: string, tags: string[] = [], notes?: string) => {
+    if (limitReached) {
       return { error: "Free limit reached. Upgrade to Pro for unlimited prompts." };
     }
 
@@ -55,6 +59,8 @@ export function usePrompts() {
       user_id: user.id,
       title,
       content,
+      tags,
+      notes: notes || null,
     });
 
     if (!error) await load();
@@ -75,5 +81,18 @@ export function usePrompts() {
     await load();
   };
 
-  return { prompts, loading, isPro, create, update, remove, reload: load };
+  return {
+    prompts,
+    loading,
+    count,
+    isPro,
+    freeLimit,
+    limitReached,
+    create,
+    add: create,
+    update,
+    remove,
+    canCreate: !limitReached,
+    reload: load,
+  };
 }
