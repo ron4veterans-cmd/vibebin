@@ -77,12 +77,21 @@ export function usePrompts() {
     return error ? { error: error.message } : { success: true };
   };
 
-  const update = async (id: string, updates: Partial<Prompt>) => {
-    const supabase = createClient();
-    if (!supabase) return;
-    await supabase.from("prompts").update(updates).eq("id", id);
-    await load();
-  };
+const update = async (id: string, updates: Partial<Prompt>) => {
+  const supabase = createClient();
+  if (!supabase) return { error: "Not available" };
+
+  const { data, error } = await supabase
+    .from("prompts")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  await load();
+  return data;
+};
 
   const remove = async (id: string) => {
     const supabase = createClient();
