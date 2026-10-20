@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Prompt } from "@/types";
@@ -43,10 +45,17 @@ export function usePrompts() {
   const count = prompts.length;
   const freeLimit = FREE_PROMPT_LIMIT;
   const limitReached = !isPro && count >= freeLimit;
+  const canCreate = !limitReached;
 
-  const create = async (title: string, content: string, tags: string[] = [], notes?: string) => {
+  const add = async (input: {
+    title: string;
+    content: string;
+    notes?: string | null;
+    tags?: string[];
+    is_agent_config?: boolean;
+  }) => {
     if (limitReached) {
-      return { error: "Free limit reached. Upgrade to Pro for unlimited prompts." };
+      return { error: "FREE_LIMIT_REACHED" };
     }
 
     const supabase = createClient();
@@ -57,14 +66,15 @@ export function usePrompts() {
 
     const { error } = await supabase.from("prompts").insert({
       user_id: user.id,
-      title,
-      content,
-      tags,
-      notes: notes || null,
+      title: input.title,
+      content: input.content,
+      notes: input.notes || null,
+      tags: input.tags || [],
+      is_agent_config: input.is_agent_config || false,
     });
 
     if (!error) await load();
-    return { error: error?.message };
+    return error ? { error: error.message } : { success: true };
   };
 
   const update = async (id: string, updates: Partial<Prompt>) => {
@@ -88,11 +98,11 @@ export function usePrompts() {
     isPro,
     freeLimit,
     limitReached,
-    create,
-    add: create,
+    canCreate,
+    add,
+    create: add,
     update,
     remove,
-    canCreate: !limitReached,
     reload: load,
   };
 }
