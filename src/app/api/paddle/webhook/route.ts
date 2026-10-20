@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   const secret = process.env.PADDLE_WEBHOOK_SECRET;
@@ -11,7 +11,6 @@ export async function POST(request: Request) {
   const raw = await request.text();
   const signature = request.headers.get("paddle-signature") || "";
 
-  // Verify signature
   const parts = Object.fromEntries(
     signature.split(";").map((p) => p.split("="))
   );
@@ -30,22 +29,23 @@ export async function POST(request: Request) {
   const event = JSON.parse(raw);
   const eventType = event?.event_type;
 
-if (eventType === "subscription.created" || eventType === "subscription.updated") {
-  const customData = event?.data?.custom_data || event?.data?.items?.[0]?.price?.custom_data;
-  const userId = customData?.user_id;
+  if (eventType === "subscription.created" || eventType === "subscription.updated") {
+    const userId = event?.data?.custom_data?.user_id;
 
-console.log("Webhook userId:", userId);
+    if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
 
-if (userId) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+      const { error } = await supabase
+        .from("profiles")
+        .update({ subscription_status: "active" })
+        .eq("id", userId);
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ subscription_status: "active" })
-    .eq("id", userId);
+      console.log("Webhook update:", error || "success", "userId:", userId);
+    }
+  }
 
-  console.log("Update result:", error || "success");
+  return NextResponse.json({ received: true });
 }
