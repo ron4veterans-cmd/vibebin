@@ -58,7 +58,7 @@ export default function NewPromptPage() {
       if (result.error === "FREE_LIMIT_REACHED") {
         setShowLimit(true);
       } else {
-        setError(result.error);
+setError(result.error || "Something went wrong");
       }
       return;
     }
