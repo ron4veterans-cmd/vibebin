@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/Button";
-import {
-  FREE_PROMPT_LIMIT,
-  PRO_MONTHLY_PRICE,
-  PRO_YEARLY_PRICE,
-} from "@/types";
+import { FREE_PROMPT_LIMIT, PRO_MONTHLY_PRICE, PRO_YEARLY_PRICE } from "@/types";
 import { IconCheck } from "@/components/Icons";
 
 export default function UpgradePage() {
@@ -15,27 +11,14 @@ export default function UpgradePage() {
   const [error, setError] = useState("");
 
   const startCheckout = async (plan: "monthly" | "yearly") => {
-    const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
-    const priceId =
-      plan === "yearly"
-        ? process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY
-        : process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY;
+    setError("User ID wiring coming next");
+    setLoading(plan);
+  };
 
-    if (!token || !priceId) {
-      setError("Paddle is not configured yet.");
-      return;
-    }
-
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError("Please sign in first.");
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
-    script.onload = () => {
-      // @ts-expect-
+  return (
+    <div className="min-h-screen p-8 text-center">
+      <h1 className="text-2xl">Upgrade</h1>
+      <Button onClick={() => startCheckout("monthly")}>Test</Button>
+    </div>
+  );
+}
