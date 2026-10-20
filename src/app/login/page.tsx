@@ -1,118 +1,112 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/Button";
+import { Input } from "@/components/Input";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("ron4veterans@gmail.com");
-  const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) return;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace("/library");
-    });
-  }, [router]);
-
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setSent(false);
-
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed || !trimmed.includes("@")) {
-      setError("Enter a valid email");
-      return;
-    }
+    setLoading(true);
 
     const supabase = createClient();
     if (!supabase) {
-      setError("Supabase is not configured.");
+      setError("Auth not available.");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email: trimmed,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        setError(error.message);
+      } else {
+        router.push("/library");
+        router.refresh();
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError(error.message);
+      } else {
+        router.push("/library");
+        router.refresh();
+      }
+    }
     setLoading(false);
-
-    if (authError) {
-      setError(authError.message);
-      return;
-    }
-
-    setSent(true);
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-semibold tracking-tight">
-            VibeBin
-          </Link>
-          <p className="mt-2 text-muted text-sm">
-            Never lose a good prompt again
-          </p>
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <Link href="/" className="text-2xl font-semibold tracking-tight mb-1">
+        VibeBin
+      </Link>
+      <p className="text-muted text-sm mb-8">Never lose a good prompt again</p>
 
-        <div className="border border-border rounded-xl bg-surface p-6 space-y-4">
-          <h1 className="text-lg font-medium text-center">Sign in</h1>
+      <div className="w-full max-w-sm border border-border rounded-xl p-6 bg-surface">
+        <h1 className="text-lg font-medium text-center mb-6">
+          {mode === "signin" ? "Sign in" : "Create account"}
+        </h1>
 
-          {sent ? (
-            <div className="text-center space-y-3">
-              <p className="text-sm text-foreground">Check your email</p>
-              <p className="text-xs text-muted">
-                We sent a magic link to <span className="text-foreground">{email}</span>.
-                Click it to sign in.
-              </p>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            minLength={6}
+          />
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+          </Button>
+        </form>
+
+        <p className="mt-4 text-center text-sm text-muted">
+          {mode === "signin" ? (
+            <>
+              No account?{" "}
+              <button type="button" className="text-accent hover:underline" onClick={() => 
+setMode("signup")}>
+                Create one
+              </button>
+            </>
           ) : (
-            <form onSubmit={handleEmailLogin} className="space-y-3">
-              <div>
-                <label htmlFor="email" className="sr-only">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
-                  required
-                />
-              </div>
-              {error && <p className="text-xs text-destructive">{error}</p>}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Sending…" : "Continue with email"}
-              </Button>
-            </form>
+            <>
+              Already have an account?{" "}
+              <button type="button" className="text-accent hover:underline" onClick={() => 
+setMode("signin")}>
+                Sign in
+              </button>
+            </>
           )}
-
-          <p className="text-xs text-muted text-center pt-1">
-            We’ll email you a magic link. No password needed.
-          </p>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-muted">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            ← Back to home
-          </Link>
         </p>
       </div>
+
+      <Link href="/" className="mt-6 text-sm text-muted hover:text-foreground">
+        ← Back to home
+      </Link>
     </div>
   );
 }
