@@ -36,16 +36,16 @@ if (eventType === "subscription.created" || eventType === "subscription.updated"
 
 console.log("Webhook userId:", userId);
 
-    if (userId) {
-      const supabase = await createClient();
-      if (supabase) {
-        await supabase
-          .from("profiles")
-          .update({ is_pro: true, subscription_status: "active" })
-          .eq("id", userId);
-      }
-    }
-  }
+if (userId) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
-  return NextResponse.json({ received: true });
+  const { error } = await supabase
+    .from("profiles")
+    .update({ subscription_status: "active" })
+    .eq("id", userId);
+
+  console.log("Update result:", error || "success");
 }
