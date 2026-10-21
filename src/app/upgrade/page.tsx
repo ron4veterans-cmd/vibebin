@@ -42,10 +42,7 @@ export default function UpgradePage() {
     const script = document.createElement("script");
     script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
     script.onload = () => {
-      // @ts-expect-error
-      // @ts-expect-error
       Paddle.Initialize({ token });
-      // @ts-expect-error
       Paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
         customData: { user_id: user.id },
