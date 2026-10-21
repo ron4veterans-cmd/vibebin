@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/Button";
 import {
-declare const Paddle: any;
   FREE_PROMPT_LIMIT,
   PRO_MONTHLY_PRICE,
   PRO_YEARLY_PRICE,
 } from "@/types";
 import { IconCheck } from "@/components/Icons";
+
+declare const Paddle: any;
 
 export default function UpgradePage() {
   const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);
