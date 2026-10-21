@@ -41,6 +41,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.push("/");
   };
 
+  const navClass = (path: string) =>
+    pathname === path
+      ? "px-3 py-1.5 rounded-md bg-surface text-foreground"
+      : "px-3 py-1.5 rounded-md text-muted hover:text-foreground";
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border">
@@ -50,18 +55,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               VibeBin
             </Link>
             <nav className="flex items-center gap-1 text-sm">
-              <Link
-                href="/library"
-                className={`px-3 py-1.5 rounded-md ${pathname === "/library" ? "bg-surface 
-text-foreground" : "text-muted hover:text-foreground"}`}
-              >
+              <Link href="/library" className={navClass("/library")}>
                 Library
               </Link>
-              <Link
-                href="/collections"
-                className={`px-3 py-1.5 rounded-md ${pathname.startsWith("/collections") ? "bg-surface 
-text-foreground" : "text-muted hover:text-foreground"}`}
-              >
+              <Link href="/collections" className={navClass("/collections")}>
                 Collections
               </Link>
             </nav>
