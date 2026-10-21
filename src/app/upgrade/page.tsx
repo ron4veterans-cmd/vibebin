@@ -43,7 +43,6 @@ export default function UpgradePage() {
     script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
     script.onload = () => {
       // @ts-expect-error
-      Paddle.Environment.set("sandbox");
       // @ts-expect-error
       Paddle.Initialize({ token });
       // @ts-expect-error
