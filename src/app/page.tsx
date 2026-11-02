@@ -157,6 +157,17 @@ export default function Home() {
       <footer className="border-t border-border py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
           <p>© {new Date().getFullYear()} VibeBin. All rights reserved.</p>
+          <nav className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-foreground transition-colors">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
+              Privacy
+            </Link>
+            <Link href="/refunds" className="hover:text-foreground transition-colors">
+              Refunds
+            </Link>
+          </nav>
           <p>Built for AI builders and vibe coders.</p>
         </div>
       </footer>
