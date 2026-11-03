@@ -1,6 +1,7 @@
 /**
  * Browser Supabase client.
- * Returns null when env vars are not set (local-first MVP mode).
+ * Returns null when env vars are not set so the app can build and render
+ * without a configured project.
  */
 import { createBrowserClient } from "@supabase/ssr";
 

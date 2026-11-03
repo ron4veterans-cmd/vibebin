@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 import { usePrompts } from "@/hooks/usePrompts";
 import type { Prompt } from "@/types";
 import { Input } from "@/components/Input";
@@ -11,12 +11,12 @@ import { Button } from "@/components/Button";
 import { formatDate } from "@/lib/utils";
 import { IconCopy, IconCheck, IconTrash, IconArrowLeft } from "@/components/Icons";
 import Link from "next/link";
-export const dynamic = "force-dynamic";
-export const dynamicParams = true;
+
 export default function PromptDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  const { supabase } = useAuth();
   const { update, remove } = usePrompts();
 
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -29,20 +29,19 @@ export default function PromptDetailPage() {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) {
-      router.replace("/login");
-      return;
-    }
+    if (!supabase) return;
 
+    let cancelled = false;
     supabase
       .from("prompts")
       .select("*")
       .eq("id", id)
       .single()
       .then(({ data, error }) => {
+        if (cancelled) return;
         if (error || !data) {
           router.replace("/library");
           return;
@@ -55,7 +54,11 @@ export default function PromptDetailPage() {
         setIsAgent(data.is_agent_config);
         setLoading(false);
       });
-  }, [id, router]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, router, supabase]);
 
   const handleCopy = async () => {
     if (!prompt) return;
@@ -67,6 +70,7 @@ export default function PromptDetailPage() {
   const handleSave = async () => {
     if (!prompt) return;
     setSaving(true);
+    setSaveError("");
     const tags = tagsRaw
       .split(",")
       .map((t) => t.trim())
@@ -84,6 +88,8 @@ export default function PromptDetailPage() {
     if (result && !("error" in result)) {
       setPrompt(result);
       setEditing(false);
+    } else if (result && "error" in result) {
+      setSaveError(result.error);
     }
   };
 
@@ -175,6 +181,7 @@ export default function PromptDetailPage() {
             />
             This is an agent config
           </label>
+          {saveError && <p className="text-sm text-destructive">{saveError}</p>}
           <div className="flex gap-3">
             <Button onClick={handleSave} disabled={saving}>
               {saving ? "Saving…" : "Save changes"}

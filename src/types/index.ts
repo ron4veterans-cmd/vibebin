@@ -3,12 +3,15 @@ export type SubscriptionPlan = "monthly" | "yearly" | null;
 
 export interface UserProfile {
   id: string;
-  email: string;
+  email: string | null;
   stripe_customer_id: string | null;
+  paddle_customer_id: string | null;
+  paddle_subscription_id: string | null;
   subscription_status: SubscriptionStatus;
   subscription_plan: SubscriptionPlan;
   current_period_end: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Prompt {

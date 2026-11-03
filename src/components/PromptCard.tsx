@@ -12,7 +12,7 @@ interface PromptCardProps {
   onDelete?: (id: string) => void;
 }
 
-export function PromptCard({ prompt, onDelete }: PromptCardProps) {
+export function PromptCard({ prompt }: PromptCardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {

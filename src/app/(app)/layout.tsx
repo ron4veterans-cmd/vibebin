@@ -1,50 +1,82 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/Button";
 import { IconLogout, IconPlus } from "@/components/Icons";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <AppShell>{children}</AppShell>
+    </AuthProvider>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [email, setEmail] = useState<string | null>(null);
-  const [isPro, setIsPro] = useState(false);
+  const { ready, configured, user, isPro, supabase, setupError } = useAuth();
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) return;
-
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-      setEmail(user.email || null);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("subscription_status")
-        .eq("id", user.id)
-        .single();
-
-      setIsPro(profile?.subscription_status === "active");
-    });
-  }, [router]);
+    if (ready && configured && !user) {
+      router.replace("/login");
+    }
+  }, [ready, configured, user, router]);
 
   const signOut = async () => {
-    const supabase = createClient();
     if (!supabase) return;
     await supabase.auth.signOut();
     router.push("/");
+    router.refresh();
   };
 
   const navClass = (path: string) =>
     pathname === path
       ? "px-3 py-1.5 rounded-md bg-surface text-foreground"
       : "px-3 py-1.5 rounded-md text-muted hover:text-foreground";
+
+  let main: React.ReactNode;
+  if (!ready) {
+    main = (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+        <p className="text-muted text-sm">Loading…</p>
+      </div>
+    );
+  } else if (!configured) {
+    main = (
+      <div className="max-w-xl mx-auto px-4 sm:px-6 py-16">
+        <div className="border border-border rounded-xl bg-surface p-6">
+          <h1 className="text-lg font-medium">Supabase is not configured</h1>
+          <p className="mt-2 text-sm text-muted">
+            Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then
+            reload. Sign-in and saved prompts stay unavailable until then.
+          </p>
+        </div>
+      </div>
+    );
+  } else if (!user) {
+    main = (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+        <p className="text-muted text-sm">Redirecting to sign in…</p>
+      </div>
+    );
+  } else {
+    main = (
+      <>
+        {setupError && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6">
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+              <p className="text-sm text-destructive">{setupError}</p>
+            </div>
+          </div>
+        )}
+        {children}
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -60,6 +92,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
               <Link href="/collections" className={navClass("/collections")}>
                 Collections
+              </Link>
+              <Link href="/account" className={navClass("/account")}>
+                Account
               </Link>
             </nav>
           </div>
@@ -80,14 +115,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 New
               </Button>
             </Link>
-            <button onClick={signOut} className="text-muted hover:text-foreground p-1.5" title="Sign 
-out">
-              <IconLogout className="w-4 h-4" />
-            </button>
+            {supabase && (
+              <button
+                onClick={signOut}
+                className="text-muted hover:text-foreground p-1.5"
+                title="Sign out"
+              >
+                <IconLogout className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">{main}</main>
     </div>
   );
 }

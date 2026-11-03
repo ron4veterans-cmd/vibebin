@@ -10,7 +10,17 @@ import {
 } from "@/types";
 import { IconCheck } from "@/components/Icons";
 
-declare const Paddle: any;
+type PaddleCheckout = {
+  Initialize: (options: { token: string }) => void;
+  Checkout: {
+    open: (options: {
+      items: { priceId: string; quantity: number }[];
+      customData: { user_id: string };
+    }) => void;
+  };
+};
+
+declare const Paddle: PaddleCheckout;
 
 export default function UpgradePage() {
   const [loading, setLoading] = useState<"monthly" | "yearly" | null>(null);

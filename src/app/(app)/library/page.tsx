@@ -2,15 +2,18 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePrompts } from "@/hooks/usePrompts";
+import { useAuth } from "@/lib/auth-context";
 import { PromptCard } from "@/components/PromptCard";
 import { LimitModal } from "@/components/LimitModal";
 import { Button } from "@/components/Button";
-import { Input } from "@/components/Input";
 import { IconPlus, IconSearch } from "@/components/Icons";
 
 export default function LibraryPage() {
-  const { prompts, loading, count, isPro, freeLimit, limitReached, remove } =
+  const router = useRouter();
+  const { importNote } = useAuth();
+  const { prompts, loading, error, count, isPro, freeLimit, limitReached, remove } =
     usePrompts();
   const [search, setSearch] = useState("");
   const [showLimit, setShowLimit] = useState(false);
@@ -32,7 +35,7 @@ export default function LibraryPage() {
       setShowLimit(true);
       return;
     }
-    window.location.href = "/prompts/new";
+    router.push("/prompts/new");
   };
 
   if (loading) {
@@ -58,6 +61,8 @@ export default function LibraryPage() {
               </span>
             )}
           </p>
+          {importNote && <p className="mt-2 text-sm text-muted">{importNote}</p>}
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </div>
         <Button onClick={handleNew} className="gap-1.5 self-start sm:self-auto">
           <IconPlus className="w-4 h-4" />

@@ -10,7 +10,7 @@ import { LimitModal } from "@/components/LimitModal";
 
 export default function NewPromptPage() {
   const router = useRouter();
-  const { add, limitReached, canCreate } = usePrompts();
+  const { add, canCreate, loading } = usePrompts();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [notes, setNotes] = useState("");
@@ -128,7 +128,7 @@ setError(result.error || "Something went wrong");
         )}
 
         <div className="flex items-center gap-3 pt-2">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || loading}>
             {saving ? "Saving…" : "Save prompt"}
           </Button>
           <Button

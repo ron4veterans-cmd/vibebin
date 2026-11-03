@@ -1,36 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  getLocalUser,
-  setLocalUser,
-  getPromptCount,
-  exportPromptsJSON,
-  exportPromptsMarkdown,
-  downloadFile,
-  type LocalUser,
-} from "@/lib/store";
+import { useAuth } from "@/lib/auth-context";
+import { usePrompts } from "@/hooks/usePrompts";
+import { downloadFile, promptsToJSON, promptsToMarkdown } from "@/lib/export";
 import { Button } from "@/components/Button";
 import { FREE_PROMPT_LIMIT } from "@/types";
+import { formatDate } from "@/lib/utils";
 
 export default function AccountPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<LocalUser | null>(null);
-  const [count, setCount] = useState(0);
+  const { user, profile, isPro } = useAuth();
+  const { prompts, count, loading } = usePrompts();
 
-  useEffect(() => {
-    const u = getLocalUser();
-    if (!u) {
-      router.replace("/login");
-      return;
-    }
-    setUser(u);
-    setCount(getPromptCount());
-  }, [router]);
-
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12">
         <p className="text-muted text-sm">Loading…</p>
@@ -38,10 +20,20 @@ export default function AccountPage() {
     );
   }
 
+  const planLabel = isPro
+    ? profile?.subscription_plan === "yearly"
+      ? "Pro · Yearly"
+      : profile?.subscription_plan === "monthly"
+        ? "Pro · Monthly"
+        : "Pro"
+    : profile?.subscription_status === "past_due"
+      ? "Past due"
+      : "Free";
+
   const handleExportJSON = () => {
     downloadFile(
       `vibebin-export-${new Date().toISOString().slice(0, 10)}.json`,
-      exportPromptsJSON(),
+      promptsToJSON(prompts),
       "application/json"
     );
   };
@@ -49,18 +41,9 @@ export default function AccountPage() {
   const handleExportMarkdown = () => {
     downloadFile(
       `vibebin-export-${new Date().toISOString().slice(0, 10)}.md`,
-      exportPromptsMarkdown(),
+      promptsToMarkdown(prompts),
       "text/markdown"
     );
-  };
-
-  const handleDowngrade = () => {
-    if (!confirm("Switch back to Free plan? (Demo only — real billing uses Stripe.)")) {
-      return;
-    }
-    const updated = { ...user, isPro: false };
-    setLocalUser(updated);
-    setUser(updated);
   };
 
   return (
@@ -73,45 +56,44 @@ export default function AccountPage() {
         </h2>
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted">Email</span>
-          <span>{user.email}</span>
+          <span>{user.email || "Google account"}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted">Plan</span>
           <span className="font-medium">
-            {user.isPro ? (
-              <span className="text-accent">Pro</span>
-            ) : (
-              "Free"
-            )}
+            {isPro ? <span className="text-accent">{planLabel}</span> : planLabel}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted">Prompts</span>
           <span>
             {count}
-            {!user.isPro && ` / ${FREE_PROMPT_LIMIT}`}
+            {!isPro && ` / ${FREE_PROMPT_LIMIT}`}
           </span>
         </div>
+        {profile?.current_period_end && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted">Current period ends</span>
+            <span>{formatDate(profile.current_period_end)}</span>
+          </div>
+        )}
       </section>
 
       <section className="mt-6 border border-border rounded-xl bg-surface p-5 space-y-4">
         <h2 className="text-sm font-medium text-muted uppercase tracking-wide">
           Subscription
         </h2>
-        {user.isPro ? (
-          <>
-            <p className="text-sm text-muted">
-              You have full access to unlimited prompts, collections, sharing,
-              and export.
-            </p>
-            <Button variant="secondary" size="sm" onClick={handleDowngrade}>
-              Switch to Free (demo)
-            </Button>
-          </>
+        {isPro ? (
+          <p className="text-sm text-muted">
+            You have full access to unlimited prompts and collections. Paddle
+            updates this plan when the subscription changes.
+          </p>
         ) : (
           <>
             <p className="text-sm text-muted">
-              Upgrade for unlimited prompts, collections, sharing, and export.
+              {profile?.subscription_status === "past_due"
+                ? "Payment is past due, so the free prompt limit applies until Paddle marks the subscription active."
+                : "Upgrade for unlimited prompts and collections."}
             </p>
             <Link href="/upgrade">
               <Button size="sm">Upgrade to Pro — $7/mo or $69/yr</Button>
