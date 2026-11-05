@@ -1,45 +1,46 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { mapDbError } from "@/lib/db-error";
 import type { Prompt } from "@/types";
 import { FREE_PROMPT_LIMIT } from "@/types";
 
 export function usePrompts() {
+  const { ready, supabase, user, isPro } = useAuth();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isPro, setIsPro] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const supabase = createClient();
-    if (!supabase) return;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!ready) return;
+    if (!supabase || !user) {
       setLoading(false);
       return;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_status")
-      .eq("id", user.id)
-      .single();
-
-    setIsPro(profile?.subscription_status === "active");
-
-    const { data } = await supabase
+    setLoading(true);
+    const { data, error: queryError } = await supabase
       .from("prompts")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    setPrompts(data || []);
+    if (queryError) {
+      setError(queryError.message);
+      setPrompts([]);
+    } else {
+      setError(null);
+      setPrompts((data ?? []) as Prompt[]);
+    }
     setLoading(false);
-  }, []);
+  }, [ready, supabase, user]);
 
   useEffect(() => {
-    load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   const count = prompts.length;
@@ -54,17 +55,10 @@ export function usePrompts() {
     tags?: string[];
     is_agent_config?: boolean;
   }) => {
-    if (limitReached) {
-      return { error: "FREE_LIMIT_REACHED" };
-    }
+    if (limitReached) return { error: "FREE_LIMIT_REACHED" };
+    if (!supabase || !user) return { error: "Not available" };
 
-    const supabase = createClient();
-    if (!supabase) return { error: "Not available" };
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: "Not signed in" };
-
-    const { error } = await supabase.from("prompts").insert({
+    const { error: insertError } = await supabase.from("prompts").insert({
       user_id: user.id,
       title: input.title,
       content: input.content,
@@ -73,28 +67,38 @@ export function usePrompts() {
       is_agent_config: input.is_agent_config || false,
     });
 
-    if (!error) await load();
-    return error ? { error: error.message } : { success: true };
+    if (insertError) {
+      return { error: mapDbError(insertError.message, insertError.code) };
+    }
+    await load();
+    return { success: true as const };
   };
 
-const update = async (id: string, updates: Partial<Prompt>) => {
-  const supabase = createClient();
-  if (!supabase) return { error: "Not available" };
+  const update = async (id: string, updates: Partial<Prompt>) => {
+    if (!supabase) return { error: "Not available" };
 
-  const { data, error } = await supabase
-    .from("prompts")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
+    const payload: Partial<Prompt> = {};
+    if (updates.title !== undefined) payload.title = updates.title;
+    if (updates.content !== undefined) payload.content = updates.content;
+    if (updates.notes !== undefined) payload.notes = updates.notes;
+    if (updates.tags !== undefined) payload.tags = updates.tags;
+    if (updates.is_agent_config !== undefined) {
+      payload.is_agent_config = updates.is_agent_config;
+    }
 
-  if (error) return { error: error.message };
-  await load();
-  return data;
-};
+    const { data, error: updateError } = await supabase
+      .from("prompts")
+      .update(payload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) return { error: mapDbError(updateError.message, updateError.code) };
+    await load();
+    return data as Prompt;
+  };
 
   const remove = async (id: string) => {
-    const supabase = createClient();
     if (!supabase) return;
     await supabase.from("prompts").delete().eq("id", id);
     await load();
@@ -103,6 +107,7 @@ const update = async (id: string, updates: Partial<Prompt>) => {
   return {
     prompts,
     loading,
+    error,
     count,
     isPro,
     freeLimit,
