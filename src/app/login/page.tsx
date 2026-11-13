@@ -27,7 +27,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -46,7 +46,18 @@ function LoginForm() {
       return;
     }
 
-    if (mode === "signup") {
+    if (mode === "reset") {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/login`,
+      });
+
+      if (resetError) {
+        setError(resetError.message);
+      } else {
+        setMessage("Check your email for a password reset link.");
+        setMode("signin");
+      }
+    } else if (mode === "signup") {
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -96,41 +107,63 @@ function LoginForm() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Password</label>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-            placeholder="••••••••"
-          />
-        </div>
+        {mode !== "reset" && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              placeholder="••••••••"
+            />
+          </div>
+        )}
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading
             ? "Working…"
             : mode === "signin"
             ? "Sign in"
-            : "Create account"}
+            : mode === "signup"
+            ? "Create account"
+            : "Send reset link"}
         </Button>
       </form>
 
-      <button
-        type="button"
-        onClick={() => {
-          setMode(mode === "signin" ? "signup" : "signin");
-          setError("");
-          setMessage("");
-        }}
-        className="mt-4 w-full text-sm text-muted hover:text-foreground"
-      >
-        {mode === "signin"
-          ? "Need an account? Sign up"
-          : "Already have an account? Sign in"}
-      </button>
+      <div className="mt-4 space-y-2 text-center">
+        {mode !== "reset" && (
+          <button
+            type="button"
+            onClick={() => {
+              setMode("reset");
+              setError("");
+              setMessage("");
+            }}
+            className="text-sm text-muted hover:text-foreground"
+          >
+            Forgot password?
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode(mode === "signin" ? "signup" : "signin");
+            setError("");
+            setMessage("");
+          }}
+          className="block w-full text-sm text-muted hover:text-foreground"
+        >
+          {mode === "signin"
+            ? "Need an account? Sign up"
+            : mode === "signup"
+            ? "Already have an account? Sign in"
+            : "Back to sign in"}
+        </button>
+      </div>
     </LoginShell>
   );
 }
@@ -145,10 +178,12 @@ function LoginShell({ children }: { children: React.ReactNode }) {
 
       <div className="w-full max-w-sm border border-border rounded-xl p-6 bg-surface">
         <h1 className="text-lg font-medium text-center mb-2">
-          Sign in
+          {mode === "reset" ? "Reset password" : "Sign in"}
         </h1>
         <p className="text-sm text-muted text-center mb-6">
-          Use your email and password.
+          {mode === "reset"
+            ? "Enter your email and we’ll send a reset link."
+            : "Use your email and password."}
         </p>
 
         {children}
