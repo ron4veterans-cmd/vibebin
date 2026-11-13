@@ -11,7 +11,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <LoginShell>
+        <LoginShell title="Sign in" subtitle="Use your email and password.">
           <p className="text-sm text-muted text-center">Loading…</p>
         </LoginShell>
       }
@@ -89,8 +89,14 @@ function LoginForm() {
     setLoading(false);
   };
 
+  const title = mode === "reset" ? "Reset password" : "Sign in";
+  const subtitle =
+    mode === "reset"
+      ? "Enter your email and we’ll send a reset link."
+      : "Use your email and password.";
+
   return (
-    <LoginShell>
+    <LoginShell title={title} subtitle={subtitle}>
       {error && <p className="mb-4 text-sm text-destructive text-center">{error}</p>}
       {message && <p className="mb-4 text-sm text-green-600 text-center">{message}</p>}
 
@@ -168,7 +174,15 @@ function LoginForm() {
   );
 }
 
-function LoginShell({ children }: { children: React.ReactNode }) {
+function LoginShell({
+  children,
+  title,
+  subtitle,
+}: {
+  children: React.ReactNode;
+  title: string;
+  subtitle: string;
+}) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <Link href="/" className="text-2xl font-semibold tracking-tight mb-1">
@@ -177,14 +191,8 @@ function LoginShell({ children }: { children: React.ReactNode }) {
       <p className="text-muted text-sm mb-8">Never lose a good prompt again</p>
 
       <div className="w-full max-w-sm border border-border rounded-xl p-6 bg-surface">
-        <h1 className="text-lg font-medium text-center mb-2">
-          {mode === "reset" ? "Reset password" : "Sign in"}
-        </h1>
-        <p className="text-sm text-muted text-center mb-6">
-          {mode === "reset"
-            ? "Enter your email and we’ll send a reset link."
-            : "Use your email and password."}
-        </p>
+        <h1 className="text-lg font-medium text-center mb-2">{title}</h1>
+        <p className="text-sm text-muted text-center mb-6">{subtitle}</p>
 
         {children}
       </div>
