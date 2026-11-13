@@ -2,21 +2,17 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { safeNextPath } from "@/lib/utils";
 import { Button } from "@/components/Button";
-import { IconGoogle } from "@/components/Icons";
 
 export default function LoginPage() {
   return (
     <Suspense
       fallback={
         <LoginShell>
-          <Button type="button" className="w-full gap-2" disabled>
-            <IconGoogle className="w-4 h-4" />
-            Continue with Google
-          </Button>
+          <p className="text-sm text-muted text-center">Loading…</p>
         </LoginShell>
       }
     >
@@ -26,52 +22,115 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const error =
-    actionError ||
-    (searchParams.get("error") === "auth"
-      ? "Google sign-in didn't finish. Try again."
-      : "");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const signInWithGoogle = async () => {
-    setActionError("");
+  const next = safeNextPath(searchParams.get("next"));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
     setLoading(true);
 
     const supabase = createClient();
     if (!supabase) {
-      setActionError("Auth not available.");
+      setError("Auth is not configured.");
       setLoading(false);
       return;
     }
 
-    const next = safeNextPath(searchParams.get("next"));
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
+    if (mode === "signup") {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        },
+      });
 
-    if (authError) {
-      setActionError(authError.message);
-      setLoading(false);
+      if (signUpError) {
+        setError(signUpError.message);
+      } else {
+        setMessage("Check your email for a confirmation link (if required). You can also try signing in.");
+        setMode("signin");
+      }
+    } else {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+      } else {
+        router.push(next);
+        router.refresh();
+      }
     }
+
+    setLoading(false);
   };
 
   return (
     <LoginShell>
       {error && <p className="mb-4 text-sm text-destructive text-center">{error}</p>}
+      {message && <p className="mb-4 text-sm text-green-600 text-center">{message}</p>}
 
-      <Button
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Email</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Password</label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading
+            ? "Working…"
+            : mode === "signin"
+            ? "Sign in"
+            : "Create account"}
+        </Button>
+      </form>
+
+      <button
         type="button"
-        className="w-full gap-2"
-        disabled={loading}
-        onClick={signInWithGoogle}
+        onClick={() => {
+          setMode(mode === "signin" ? "signup" : "signin");
+          setError("");
+          setMessage("");
+        }}
+        className="mt-4 w-full text-sm text-muted hover:text-foreground"
       >
-        <IconGoogle className="w-4 h-4" />
-        {loading ? "Redirecting…" : "Continue with Google"}
-      </Button>
+        {mode === "signin"
+          ? "Need an account? Sign up"
+          : "Already have an account? Sign in"}
+      </button>
     </LoginShell>
   );
 }
@@ -85,9 +144,11 @@ function LoginShell({ children }: { children: React.ReactNode }) {
       <p className="text-muted text-sm mb-8">Never lose a good prompt again</p>
 
       <div className="w-full max-w-sm border border-border rounded-xl p-6 bg-surface">
-        <h1 className="text-lg font-medium text-center mb-2">Sign in</h1>
+        <h1 className="text-lg font-medium text-center mb-2">
+          Sign in
+        </h1>
         <p className="text-sm text-muted text-center mb-6">
-          Use your Google account. No password to remember.
+          Use your email and password.
         </p>
 
         {children}
